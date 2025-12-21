@@ -23,6 +23,7 @@ export default function EnrollmentModal({ isOpen, onClose }: EnrollmentModalProp
     setError('');
 
     try {
+      // First, create the enrollment record in the database
       const { error: dbError } = await supabase
         .from('enrollments')
         .insert([
@@ -35,23 +36,50 @@ export default function EnrollmentModal({ isOpen, onClose }: EnrollmentModalProp
           },
         ]);
 
-      if (dbError) throw dbError;
-
-      await refreshEnrollment();
-      setSuccess(true);
-
-      setTimeout(() => {
-        setSuccess(false);
-        onClose();
-      }, 2000);
-    } catch (err: any) {
-      if (err.code === '23505') {
-        setError('You are already enrolled in this program.');
-      } else {
-        setError('Something went wrong. Please try again or contact support.');
+      if (dbError) {
+        if (dbError.code === '23505') {
+          setError('You are already enrolled in this program.');
+        } else {
+          throw dbError;
+        }
+        return;
       }
+
+      // Call the Stripe Checkout Session edge function
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/create-checkout-session`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            userEmail: user.email,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create checkout session');
+      }
+
+      const { url } = await response.json();
+
+      // Redirect to Stripe Checkout
+      if (url) {
+        window.location.href = url;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong. Please try again or contact support.');
       console.error('Enrollment error:', err);
-    } finally {
       setIsSubmitting(false);
     }
   };

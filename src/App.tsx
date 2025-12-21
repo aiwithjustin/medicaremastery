@@ -13,12 +13,14 @@ import PaymentRequired from './components/PaymentRequired';
 import ProgramDashboard from './components/ProgramDashboard';
 import AdminPanel from './components/AdminPanel';
 import LoginPage from './components/LoginPage';
+import SuccessPage from './components/SuccessPage';
+import CancelPage from './components/CancelPage';
 
 function AppContent() {
   const { user, enrollment, loading } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isEnrollmentModalOpen, setIsEnrollmentModalOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<'landing' | 'dashboard' | 'payment' | 'admin' | 'login'>('landing');
+  const [currentView, setCurrentView] = useState<'landing' | 'dashboard' | 'payment' | 'admin' | 'login' | 'success' | 'cancel'>('landing');
 
   useEffect(() => {
     const path = window.location.pathname;
@@ -30,6 +32,16 @@ function AppContent() {
 
     if (path === '/program/login') {
       setCurrentView('login');
+      return;
+    }
+
+    if (path === '/success') {
+      setCurrentView('success');
+      return;
+    }
+
+    if (path === '/cancel') {
+      setCurrentView('cancel');
       return;
     }
 
@@ -113,6 +125,14 @@ function AppContent() {
 
   if (currentView === 'payment') {
     return <PaymentRequired />;
+  }
+
+  if (currentView === 'success') {
+    return <SuccessPage />;
+  }
+
+  if (currentView === 'cancel') {
+    return <CancelPage />;
   }
 
   return (
