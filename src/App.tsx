@@ -9,6 +9,7 @@ import FAQ from './components/FAQ';
 import FinalCTA from './components/FinalCTA';
 import AuthModal from './components/AuthModal';
 import EnrollmentModal from './components/EnrollmentModal';
+import RoadmapModal from './components/RoadmapModal';
 import PaymentRequired from './components/PaymentRequired';
 import ProgramDashboard from './components/ProgramDashboard';
 import AdminPanel from './components/AdminPanel';
@@ -20,6 +21,7 @@ function AppContent() {
   const { user, enrollment, loading } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isEnrollmentModalOpen, setIsEnrollmentModalOpen] = useState(false);
+  const [isRoadmapModalOpen, setIsRoadmapModalOpen] = useState(false);
   const [currentView, setCurrentView] = useState<'landing' | 'dashboard' | 'payment' | 'admin' | 'login' | 'success' | 'cancel'>('landing');
 
   useEffect(() => {
@@ -108,6 +110,10 @@ function AppContent() {
     }
   };
 
+  const handleRoadmapClick = () => {
+    setIsRoadmapModalOpen(true);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -151,7 +157,7 @@ function AppContent() {
       />
 
       <div className="pt-20">
-        <Hero onEnrollClick={handleEnrollClick} />
+        <Hero onEnrollClick={handleEnrollClick} onRoadmapClick={handleRoadmapClick} />
 
         <div id="features">
           <Features />
@@ -179,6 +185,11 @@ function AppContent() {
       <EnrollmentModal
         isOpen={isEnrollmentModalOpen}
         onClose={() => setIsEnrollmentModalOpen(false)}
+      />
+
+      <RoadmapModal
+        isOpen={isRoadmapModalOpen}
+        onClose={() => setIsRoadmapModalOpen(false)}
       />
 
       <footer className="bg-gray-900 text-gray-400 py-12">

@@ -2,12 +2,13 @@ import { Award } from 'lucide-react';
 
 interface HeroProps {
   onEnrollClick: () => void;
+  onRoadmapClick: () => void;
 }
 
-export default function Hero({ onEnrollClick }: HeroProps) {
-  const handleClick = () => {
+export default function Hero({ onEnrollClick, onRoadmapClick }: HeroProps) {
+  const handleRoadmapClick = () => {
     console.log('🟡 [HERO] "Get the Free Medicare Career Roadmap" button clicked');
-    onEnrollClick();
+    onRoadmapClick();
   };
 
   return (
@@ -32,7 +33,7 @@ export default function Hero({ onEnrollClick }: HeroProps) {
 
             <div className="flex flex-col sm:flex-row gap-4">
               <button
-                onClick={handleClick}
+                onClick={handleRoadmapClick}
                 className="bg-crimson-600 hover:bg-crimson-700 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all transform hover:scale-105 shadow-xl"
               >
                 Get the Free Medicare Career Roadmap
