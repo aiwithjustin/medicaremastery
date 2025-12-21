@@ -9,10 +9,10 @@ interface EnrollmentModalProps {
 }
 
 export default function EnrollmentModal({ isOpen, onClose }: EnrollmentModalProps) {
-  const { user, refreshEnrollment } = useAuth();
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   if (!isOpen) return null;
 
@@ -89,13 +89,34 @@ export default function EnrollmentModal({ isOpen, onClose }: EnrollmentModalProp
 
       const { url } = responseData;
 
-      if (url) {
-        console.log('🔵 [ENROLL] Redirecting to Stripe Checkout:', url);
-        window.location.href = url;
-      } else {
+      if (!url) {
         console.error('❌ [ENROLL] No checkout URL in response');
+        console.error('❌ [ENROLL] Full response:', responseData);
         throw new Error('No checkout URL returned');
       }
+
+      console.log('🔵 [ENROLL] FORCING HARD REDIRECT to Stripe Checkout');
+      console.log('🔵 [ENROLL] Redirect URL:', url);
+      console.log('🔵 [ENROLL] Setting redirect state...');
+
+      setIsRedirecting(true);
+
+      console.log('🔵 [ENROLL] Executing window.location.assign() NOW...');
+
+      setTimeout(() => {
+        try {
+          window.location.assign(url);
+          console.log('🔵 [ENROLL] window.location.assign() executed');
+        } catch (redirectError) {
+          console.error('❌ [ENROLL] Redirect failed:', redirectError);
+          console.log('🔵 [ENROLL] Trying window.location.href as fallback');
+          window.location.href = url;
+        }
+      }, 100);
+
+      console.log('🔵 [ENROLL] Redirect scheduled - page will navigate in 100ms');
+
+      return;
     } catch (err: any) {
       console.error('❌ [ENROLL] Error during enrollment:', err);
       setError(err.message || 'Something went wrong. Please try again or contact support.');
@@ -106,25 +127,30 @@ export default function EnrollmentModal({ isOpen, onClose }: EnrollmentModalProp
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="fixed inset-0 bg-black bg-opacity-75 transition-opacity" onClick={onClose}></div>
+        <div className="fixed inset-0 bg-black bg-opacity-75 transition-opacity" onClick={isRedirecting ? undefined : onClose}></div>
 
         <div className="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8">
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
+          {!isRedirecting && (
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          )}
 
-          {success ? (
+          {isRedirecting ? (
             <div className="text-center py-12">
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Check className="w-10 h-10 text-green-600" />
+              <div className="w-20 h-20 bg-crimson-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+                <CreditCard className="w-10 h-10 text-crimson-600" />
               </div>
-              <h3 className="text-3xl font-bold text-gray-900 mb-4">Enrollment Created!</h3>
+              <h3 className="text-3xl font-bold text-gray-900 mb-4">Redirecting to Stripe Checkout...</h3>
               <p className="text-gray-600 text-lg">
-                Redirecting you to complete your payment...
+                Please wait while we redirect you to complete your payment.
               </p>
+              <div className="mt-4 text-sm text-gray-500">
+                If you are not redirected automatically, please check your browser console.
+              </div>
             </div>
           ) : (
             <>
