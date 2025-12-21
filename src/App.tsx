@@ -67,13 +67,21 @@ function AppContent() {
   }, [user, enrollment, loading]);
 
   const handleEnrollClick = () => {
+    console.log('🟢 [APP] Enroll button clicked on landing page');
+    console.log('🟢 [APP] User state:', user ? `Logged in as ${user.email}` : 'Not logged in');
+    console.log('🟢 [APP] Enrollment state:', enrollment || 'No enrollment');
+
     if (!user) {
+      console.log('🟢 [APP] Opening authentication modal');
       setIsAuthModalOpen(true);
     } else if (!enrollment) {
+      console.log('🟢 [APP] Opening enrollment modal');
       setIsEnrollmentModalOpen(true);
     } else if (enrollment.program_access === 'locked') {
+      console.log('🟢 [APP] Redirecting to payment required page');
       setCurrentView('payment');
     } else {
+      console.log('🟢 [APP] Redirecting to dashboard');
       setCurrentView('dashboard');
     }
   };

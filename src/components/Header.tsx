@@ -6,6 +6,11 @@ interface HeaderProps {
 }
 
 export default function Header({ onEnrollClick, onLoginClick }: HeaderProps) {
+  const handleEnrollClick = () => {
+    console.log('🔴 [HEADER] "Enroll Now" button clicked');
+    onEnrollClick();
+  };
+
   return (
     <header className="fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -39,7 +44,7 @@ export default function Header({ onEnrollClick, onLoginClick }: HeaderProps) {
               </button>
             )}
             <button
-              onClick={onEnrollClick}
+              onClick={handleEnrollClick}
               className="bg-gradient-to-r from-crimson-600 to-prune-700 text-white px-6 py-2.5 rounded-lg font-semibold hover:from-crimson-700 hover:to-prune-800 transition-all transform hover:scale-105"
             >
               Enroll Now
@@ -56,7 +61,7 @@ export default function Header({ onEnrollClick, onLoginClick }: HeaderProps) {
               </button>
             )}
             <button
-              onClick={onEnrollClick}
+              onClick={handleEnrollClick}
               className="bg-crimson-600 text-white px-4 py-2 rounded-lg font-semibold text-sm"
             >
               Enroll

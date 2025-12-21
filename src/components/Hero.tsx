@@ -5,6 +5,11 @@ interface HeroProps {
 }
 
 export default function Hero({ onEnrollClick }: HeroProps) {
+  const handleClick = () => {
+    console.log('🟡 [HERO] "Get the Free Medicare Career Roadmap" button clicked');
+    onEnrollClick();
+  };
+
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-crimson-900 via-crimson-800 to-prune-900 text-white">
       <div className="absolute inset-0 bg-black opacity-20"></div>
@@ -27,7 +32,7 @@ export default function Hero({ onEnrollClick }: HeroProps) {
 
             <div className="flex flex-col sm:flex-row gap-4">
               <button
-                onClick={onEnrollClick}
+                onClick={handleClick}
                 className="bg-crimson-600 hover:bg-crimson-700 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all transform hover:scale-105 shadow-xl"
               >
                 Get the Free Medicare Career Roadmap

@@ -5,6 +5,11 @@ interface FinalCTAProps {
 }
 
 export default function FinalCTA({ onEnrollClick }: FinalCTAProps) {
+  const handleClick = () => {
+    console.log('🟠 [FINAL CTA] "Get the Free Medicare Career Roadmap" button clicked');
+    onEnrollClick();
+  };
+
   return (
     <section className="py-20 bg-gradient-to-r from-crimson-600 via-crimson-700 to-prune-700 text-white relative overflow-hidden">
       <div className="absolute inset-0 bg-black opacity-10"></div>
@@ -21,7 +26,7 @@ export default function FinalCTA({ onEnrollClick }: FinalCTAProps) {
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
           <button
-            onClick={onEnrollClick}
+            onClick={handleClick}
             className="bg-white text-crimson-700 px-10 py-5 rounded-lg font-bold text-lg transition-all transform hover:scale-105 shadow-2xl hover:shadow-3xl"
           >
             Get the Free Medicare Career Roadmap

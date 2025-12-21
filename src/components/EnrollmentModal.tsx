@@ -17,13 +17,20 @@ export default function EnrollmentModal({ isOpen, onClose }: EnrollmentModalProp
   if (!isOpen) return null;
 
   const handleEnroll = async () => {
-    if (!user) return;
+    console.log('🔵 [ENROLL] Button clicked - Starting enrollment process');
 
+    if (!user) {
+      console.error('❌ [ENROLL] No user found - aborting');
+      return;
+    }
+
+    console.log('🔵 [ENROLL] User authenticated:', user.email);
     setIsSubmitting(true);
     setError('');
 
     try {
-      // First, create the enrollment record in the database
+      console.log('🔵 [ENROLL] Creating enrollment record in database...');
+
       const { error: dbError } = await supabase
         .from('enrollments')
         .insert([
@@ -38,48 +45,60 @@ export default function EnrollmentModal({ isOpen, onClose }: EnrollmentModalProp
 
       if (dbError) {
         if (dbError.code === '23505') {
+          console.log('⚠️ [ENROLL] User already enrolled');
           setError('You are already enrolled in this program.');
         } else {
+          console.error('❌ [ENROLL] Database error:', dbError);
           throw dbError;
         }
         return;
       }
 
-      // Call the Stripe Checkout Session edge function
+      console.log('✅ [ENROLL] Enrollment record created successfully');
+      console.log('🔵 [ENROLL] Calling Stripe Checkout Session API...');
+
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const checkoutUrl = `${supabaseUrl}/functions/v1/create-checkout-session`;
 
-      const response = await fetch(
-        `${supabaseUrl}/functions/v1/create-checkout-session`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${supabaseAnonKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            userId: user.id,
-            userEmail: user.email,
-          }),
-        }
-      );
+      console.log('🔵 [ENROLL] Request URL:', checkoutUrl);
+      console.log('🔵 [ENROLL] Request payload:', { userId: user.id, userEmail: user.email });
+
+      const response = await fetch(checkoutUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          userEmail: user.email,
+        }),
+      });
+
+      console.log('🔵 [ENROLL] Response status:', response.status, response.statusText);
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('❌ [ENROLL] Checkout session creation failed:', errorData);
         throw new Error(errorData.error || 'Failed to create checkout session');
       }
 
-      const { url } = await response.json();
+      const responseData = await response.json();
+      console.log('✅ [ENROLL] Checkout session created:', responseData);
 
-      // Redirect to Stripe Checkout
+      const { url } = responseData;
+
       if (url) {
+        console.log('🔵 [ENROLL] Redirecting to Stripe Checkout:', url);
         window.location.href = url;
       } else {
+        console.error('❌ [ENROLL] No checkout URL in response');
         throw new Error('No checkout URL returned');
       }
     } catch (err: any) {
+      console.error('❌ [ENROLL] Error during enrollment:', err);
       setError(err.message || 'Something went wrong. Please try again or contact support.');
-      console.error('Enrollment error:', err);
       setIsSubmitting(false);
     }
   };
