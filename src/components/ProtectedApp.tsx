@@ -13,7 +13,7 @@ export default function ProtectedApp() {
 
     if (!user) {
       console.log('❌ [PROTECTED] No user session found, redirecting to login');
-      window.location.href = 'https://medicaremastery.app/login';
+      window.location.href = 'https://app.medicaremastery.app/login';
       return;
     }
 

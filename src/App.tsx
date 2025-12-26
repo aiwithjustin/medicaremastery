@@ -32,7 +32,7 @@ function AppContent() {
       return;
     }
 
-    if (path === '/program/login') {
+    if (path === '/login' || path === '/program/login') {
       setCurrentView('login');
       return;
     }
@@ -54,8 +54,7 @@ function AppContent() {
 
     if (isProtectedRoute) {
       if (!user) {
-        window.history.pushState({}, '', '/program/login');
-        setCurrentView('login');
+        window.location.href = 'https://app.medicaremastery.app/login';
       } else if (enrollment?.program_access === 'unlocked') {
         setCurrentView('dashboard');
       } else if (enrollment?.program_access === 'locked') {
@@ -89,8 +88,8 @@ function AppContent() {
   };
 
   const handleLoginClick = () => {
-    window.history.pushState({}, '', '/program/login');
-    setCurrentView('login');
+    console.log('🔵 [APP] Login button clicked, redirecting to app.medicaremastery.app/login');
+    window.location.href = 'https://app.medicaremastery.app/login';
   };
 
   const handleAuthSuccess = () => {

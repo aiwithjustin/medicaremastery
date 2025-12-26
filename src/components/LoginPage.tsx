@@ -1,23 +1,21 @@
-import { Lock, Mail, GraduationCap } from 'lucide-react';
+import { Lock, Mail, GraduationCap, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
 interface LoginPageProps {
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }
 
 export default function LoginPage({ onSuccess }: LoginPageProps) {
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    fullName: '',
-    phone: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const { signIn, signUp } = useAuth();
+  const { signIn } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,25 +23,42 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
     setError('');
 
     try {
-      if (mode === 'signup') {
-        const { error: signUpError } = await signUp(
-          formData.email,
-          formData.password,
-          formData.fullName,
-          formData.phone
-        );
+      const { error: signInError } = await signIn(formData.email, formData.password);
 
-        if (signUpError) throw signUpError;
-      } else {
-        const { error: signInError } = await signIn(formData.email, formData.password);
+      if (signInError) throw signInError;
 
-        if (signInError) throw signInError;
+      console.log('✅ [LOGIN] Sign in successful, checking entitlement...');
+
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        throw new Error('No user found after login');
       }
 
-      onSuccess();
+      const { data: entitlement, error: entitlementError } = await supabase
+        .from('entitlements')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (entitlementError) {
+        console.error('❌ [LOGIN] Error fetching entitlement:', entitlementError);
+        throw new Error('Failed to check access status');
+      }
+
+      if (entitlement && entitlement.has_active_access && entitlement.payment_verified) {
+        console.log('✅ [LOGIN] User has active access, redirecting to dashboard');
+        window.location.href = 'https://app.medicaremastery.app';
+      } else {
+        console.log('❌ [LOGIN] User does not have active access, redirecting to pricing');
+        window.location.href = 'https://medicaremastery.app/pricing';
+      }
+
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (err: any) {
       setError(err.message || 'An error occurred. Please try again.');
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -56,59 +71,21 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-prune-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-crimson-600 to-prune-700 rounded-xl mb-4">
             <GraduationCap className="w-9 h-9 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {mode === 'signup' ? 'Create Your Account' : 'Welcome Back'}
+            Welcome Back
           </h1>
           <p className="text-gray-600">
-            {mode === 'signup'
-              ? 'Start your Medicare Mastery journey'
-              : 'Sign in to access your program'}
+            Sign in to access your Medicare Mastery program
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {mode === 'signup' && (
-            <>
-              <div>
-                <label htmlFor="fullName" className="block text-sm font-semibold text-gray-700 mb-2">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  id="fullName"
-                  name="fullName"
-                  required
-                  value={formData.fullName}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-transparent transition-all"
-                  placeholder="John Doe"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 mb-2">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  id="phone"
-                  name="phone"
-                  required
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-transparent transition-all"
-                  placeholder="(555) 123-4567"
-                />
-              </div>
-            </>
-          )}
-
           <div>
             <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
               Email Address
@@ -146,9 +123,6 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
                 minLength={6}
               />
             </div>
-            {mode === 'signup' && (
-              <p className="text-xs text-gray-500 mt-1">Must be at least 6 characters</p>
-            )}
           </div>
 
           {error && (
@@ -160,29 +134,34 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-gradient-to-r from-crimson-600 to-crimson-700 hover:from-crimson-700 hover:to-crimson-800 text-white py-3 rounded-lg font-semibold transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            className="w-full bg-gradient-to-r from-crimson-600 to-crimson-700 hover:from-crimson-700 hover:to-crimson-800 text-white py-3 rounded-lg font-semibold transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2"
           >
-            {isSubmitting ? 'Processing...' : mode === 'signup' ? 'Create Account' : 'Sign In'}
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Signing In...</span>
+              </>
+            ) : (
+              <span>Sign In</span>
+            )}
           </button>
         </form>
 
         <div className="mt-6 text-center">
-          <button
-            onClick={() => {
-              setMode(mode === 'signup' ? 'signin' : 'signup');
-              setError('');
-            }}
-            className="text-crimson-600 hover:text-crimson-700 font-medium text-sm"
+          <p className="text-gray-600 text-sm mb-2">
+            Don't have an account?
+          </p>
+          <a
+            href="https://medicaremastery.app"
+            className="text-crimson-600 hover:text-crimson-700 font-semibold text-sm"
           >
-            {mode === 'signup'
-              ? 'Already have an account? Sign in'
-              : "Don't have an account? Sign up"}
-          </button>
+            Enroll in Medicare Mastery
+          </a>
         </div>
 
         <div className="mt-6 text-center">
           <a
-            href="/"
+            href="https://medicaremastery.app"
             className="text-gray-600 hover:text-gray-800 text-sm font-medium"
           >
             Back to home

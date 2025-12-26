@@ -7,9 +7,11 @@ This guide explains how to deploy the unified authentication and payment system 
 The Medicare Mastery platform consists of two applications:
 
 1. **Marketing Site** (`medicaremastery.app`) - Landing page, signup, and payment processing
-2. **Program App** (`app.medicaremastery.app`) - Protected dashboard for enrolled students
+2. **Program App** (`app.medicaremastery.app`) - Protected dashboard and centralized authentication
 
 Both applications use the **same Supabase project** to share authentication sessions and user data.
+
+**Important:** Authentication is handled exclusively on the program app. The marketing site redirects all login requests to `app.medicaremastery.app/login`.
 
 ## Architecture
 

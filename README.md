@@ -13,11 +13,12 @@ Both applications share the same Supabase backend for seamless authentication an
 
 ## Features
 
-- **Unified Authentication**: Single Supabase instance shared across both domains
+- **Centralized Authentication**: All login handled on `app.medicaremastery.app`
+- **Unified Sessions**: Single Supabase instance shared across both domains
 - **Payment Processing**: Integrated Stripe Checkout with webhook verification
 - **Access Control**: Server-authoritative entitlement system with Row Level Security
 - **Cross-Domain Sessions**: Persistent authentication across subdomains
-- **Automatic Redirects**: Seamless flow from signup to payment to dashboard
+- **Smart Redirects**: Entitlement-based routing after login
 
 ## Tech Stack
 
@@ -107,6 +108,10 @@ All tables use Row Level Security (RLS) with restrictive policies:
 4. Stripe webhook creates entitlement record
 5. Success page polls for entitlement confirmation
 6. Automatic redirect to program app with preserved session
+
+## Authentication Flow
+
+The platform uses centralized authentication where all login functionality is handled on the program app. See [LOGIN_FLOW.md](./LOGIN_FLOW.md) for detailed information about the login flow and session management.
 
 ## Deployment
 
