@@ -26,14 +26,10 @@ function AppContent() {
 
   useEffect(() => {
     const path = window.location.pathname;
+    const hostname = window.location.hostname;
 
     if (path === '/admin') {
       setCurrentView('admin');
-      return;
-    }
-
-    if (path === '/login' || path === '/program/login') {
-      setCurrentView('login');
       return;
     }
 
@@ -49,12 +45,32 @@ function AppContent() {
 
     if (loading) return;
 
+    const isAppDomain = hostname === 'app.medicaremastery.app' || hostname === 'localhost';
+    const isRootRoute = path === '/';
+
+    if (isAppDomain && isRootRoute) {
+      if (!user) {
+        console.log('🔵 [APP] No user session on app root, showing login');
+        setCurrentView('login');
+      } else if (enrollment?.program_access === 'unlocked') {
+        console.log('✅ [APP] User has access, showing dashboard');
+        setCurrentView('dashboard');
+      } else if (enrollment?.program_access === 'locked') {
+        console.log('⚠️ [APP] User has no access, showing payment required');
+        setCurrentView('payment');
+      } else {
+        console.log('❌ [APP] User has no enrollment, redirecting to pricing');
+        window.location.href = 'https://medicaremastery.app/pricing';
+      }
+      return;
+    }
+
     const isProtectedRoute = path === '/dashboard' || path === '/program' || path.startsWith('/program/');
     const isPublicRoute = path === '/' || !isProtectedRoute;
 
     if (isProtectedRoute) {
       if (!user) {
-        window.location.href = 'https://app.medicaremastery.app/login';
+        window.location.href = 'https://app.medicaremastery.app';
       } else if (enrollment?.program_access === 'unlocked') {
         setCurrentView('dashboard');
       } else if (enrollment?.program_access === 'locked') {
@@ -88,8 +104,8 @@ function AppContent() {
   };
 
   const handleLoginClick = () => {
-    console.log('🔵 [APP] Login button clicked, redirecting to app.medicaremastery.app/login');
-    window.location.href = 'https://app.medicaremastery.app/login';
+    console.log('🔵 [APP] Login button clicked, redirecting to app.medicaremastery.app');
+    window.location.href = 'https://app.medicaremastery.app';
   };
 
   const handleAuthSuccess = () => {

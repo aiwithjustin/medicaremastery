@@ -111,7 +111,13 @@ All tables use Row Level Security (RLS) with restrictive policies:
 
 ## Authentication Flow
 
-The platform uses centralized authentication where all login functionality is handled on the program app. See [LOGIN_FLOW.md](./LOGIN_FLOW.md) for detailed information about the login flow and session management.
+The platform uses a simplified root-based authentication approach:
+
+1. **Marketing Site** - Login button redirects to `app.medicaremastery.app`
+2. **Program App Root** - Intelligently displays login UI or dashboard based on session state
+3. **No `/login` Route** - Authentication happens at the root with automatic view switching
+
+See [LOGIN_FLOW.md](./LOGIN_FLOW.md) for detailed information about the login flow and session management.
 
 ## Deployment
 

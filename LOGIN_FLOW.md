@@ -4,6 +4,8 @@
 
 The Medicare Mastery platform uses a centralized authentication approach where all login functionality is handled exclusively on the program app domain (`app.medicaremastery.app`). The marketing site (`medicaremastery.app`) redirects users to the program app for authentication.
 
+**Key Principle:** The root route (`/`) of the program app serves as both the login entry point and the authenticated dashboard, automatically adapting based on session state.
+
 ## Architecture
 
 ### Two-Domain Structure
@@ -12,33 +14,56 @@ The Medicare Mastery platform uses a centralized authentication approach where a
    - Landing page with program information
    - Enrollment and payment processing
    - NO local authentication forms
-   - Login buttons redirect to program app
+   - Login buttons redirect to program app root
 
 2. **Program App** (`app.medicaremastery.app`)
-   - Centralized authentication at `/login`
-   - Protected dashboard and program content
+   - Root route (`/`) handles both login and dashboard
+   - Automatic session detection
    - Entitlement-based access control
+   - No separate `/login` route needed
 
 ## Login Flow
 
 ### From Marketing Site
 
 1. User clicks "Log In" button on `medicaremastery.app`
-2. Immediate redirect to `https://app.medicaremastery.app/login`
+2. Immediate redirect to `https://app.medicaremastery.app` (root)
 3. No intermediate steps or confirmations
 
 **Implementation:**
 ```typescript
 // src/App.tsx - handleLoginClick
 const handleLoginClick = () => {
-  console.log('🔵 [APP] Login button clicked, redirecting to app.medicaremastery.app/login');
-  window.location.href = 'https://app.medicaremastery.app/login';
+  console.log('🔵 [APP] Login button clicked, redirecting to app.medicaremastery.app');
+  window.location.href = 'https://app.medicaremastery.app';
 };
 ```
 
-### On Program App Login Page
+### On Program App Root Route
 
-Located at `https://app.medicaremastery.app/login`
+Located at `https://app.medicaremastery.app/`
+
+**Intelligent Routing Logic:**
+
+The root route automatically determines what to display based on authentication state:
+
+```typescript
+if (isAppDomain && isRootRoute) {
+  if (!user) {
+    // Show login UI
+    setCurrentView('login');
+  } else if (enrollment?.program_access === 'unlocked') {
+    // Show dashboard
+    setCurrentView('dashboard');
+  } else if (enrollment?.program_access === 'locked') {
+    // Show payment required page
+    setCurrentView('payment');
+  } else {
+    // Redirect to pricing
+    window.location.href = 'https://medicaremastery.app/pricing';
+  }
+}
+```
 
 **Features:**
 - Email/password authentication only (no signup)
@@ -88,7 +113,7 @@ When a user tries to access protected routes on `app.medicaremastery.app`:
 4. Complete payment via Stripe
 5. Webhook creates entitlement
 6. Redirect to app.medicaremastery.app (automatic login via session)
-7. Dashboard loads
+7. Root route detects session and access, shows dashboard
 ```
 
 ### Returning User (With Access)
@@ -96,37 +121,47 @@ When a user tries to access protected routes on `app.medicaremastery.app`:
 ```
 1. Visit medicaremastery.app
 2. Click "Log In"
-3. Redirect to app.medicaremastery.app/login
-4. Enter credentials
-5. System verifies entitlement (has_active_access = true)
-6. Redirect to app.medicaremastery.app
-7. Dashboard loads
+3. Redirect to app.medicaremastery.app (root)
+4. Root route detects no session, shows login UI
+5. Enter credentials
+6. System verifies entitlement (has_active_access = true)
+7. Root route now shows dashboard (no redirect needed)
 ```
 
 ### User Without Access
 
 ```
-1. Visit app.medicaremastery.app/login
-2. Enter credentials
-3. System verifies entitlement (has_active_access = false)
-4. Redirect to medicaremastery.app/pricing
-5. User can purchase access
+1. Visit app.medicaremastery.app (root)
+2. Root route shows login UI
+3. Enter credentials
+4. System verifies entitlement (has_active_access = false)
+5. Redirect to medicaremastery.app/pricing
+6. User can purchase access
 ```
 
 ### Direct Dashboard Access (Unauthenticated)
 
 ```
 1. Visit app.medicaremastery.app directly
-2. ProtectedApp checks for session
+2. Root route checks for session
 3. No session found
-4. Redirect to app.medicaremastery.app/login
+4. Root route shows login UI
 ```
 
-### Direct Dashboard Access (No Access)
+### Direct Dashboard Access (Authenticated with Access)
 
 ```
 1. Visit app.medicaremastery.app with valid session
-2. ProtectedApp checks entitlement
+2. Root route detects session and checks entitlement
+3. has_active_access = true
+4. Root route shows dashboard
+```
+
+### Direct Dashboard Access (Authenticated without Access)
+
+```
+1. Visit app.medicaremastery.app with valid session
+2. Root route detects session and checks entitlement
 3. has_active_access = false
 4. Redirect to medicaremastery.app/pricing
 ```
@@ -200,11 +235,29 @@ Multiple layers of security:
 </button>
 ```
 
-**Behavior:** Redirects to `https://app.medicaremastery.app/login`
+**Behavior:** Redirects to `https://app.medicaremastery.app` (root)
+
+### App Root Route Logic (Program App)
+
+**Location:** `src/App.tsx`
+
+**Intelligent View Selection:**
+The root route of the program app automatically determines what to display:
+- **No Session:** Shows LoginPage component
+- **Session + Access:** Shows ProgramDashboard component
+- **Session + No Access:** Redirects to pricing page
+
+**Features:**
+- Automatic session detection
+- Entitlement-based routing
+- Seamless user experience
+- No page reload between views
 
 ### LoginPage (Program App)
 
 **Location:** `src/components/LoginPage.tsx`
+
+**Rendered at:** Root route (`/`) when no session exists
 
 **Features:**
 - Email and password fields only
@@ -220,10 +273,12 @@ The login page is strictly for authentication. New users must enroll through the
 
 **Location:** `src/components/ProtectedApp.tsx`
 
+**Usage:** For standalone protected route access (not used on root)
+
 **Features:**
 - Session verification
 - Entitlement checking
-- Automatic redirects
+- Automatic redirects to app root
 - Loading states
 - Error handling
 
@@ -241,16 +296,23 @@ VITE_SUPABASE_ANON_KEY=[your-anon-key]
 ### Routes
 
 **Marketing Site:**
-- `/` - Landing page
+- `/` - Landing page with enrollment flow
 - `/pricing` - Pricing information (for users without access)
 - `/success` - Payment success and redirect
 - `/cancel` - Payment cancellation
 
 **Program App:**
-- `/login` - Centralized authentication
-- `/` - Protected dashboard (requires entitlement)
-- `/dashboard` - Alternative dashboard route
-- `/program` - Program content (requires entitlement)
+- `/` - Smart root route (login UI or dashboard based on session)
+  - **No session:** Displays login UI
+  - **Session + Access:** Displays dashboard
+  - **Session + No Access:** Redirects to pricing
+- `/dashboard` - Alternative dashboard route (protected)
+- `/program` - Program content route (protected)
+- `/admin` - Admin panel (protected)
+- `/success` - Payment success confirmation
+- `/cancel` - Payment cancellation confirmation
+
+**Note:** The program app no longer uses a `/login` route. All authentication happens at the root (`/`) with intelligent view switching.
 
 ## Testing Scenarios
 
@@ -258,31 +320,40 @@ VITE_SUPABASE_ANON_KEY=[your-anon-key]
 
 1. **Happy Path:**
    - Click login on marketing site
-   - Verify redirect to app.medicaremastery.app/login
+   - Verify redirect to app.medicaremastery.app (root)
+   - Verify login UI appears
    - Enter valid credentials
-   - Verify redirect to dashboard
+   - Verify dashboard loads without additional redirect
 
 2. **No Access:**
-   - Login with credentials
-   - User has no entitlement
+   - Visit app.medicaremastery.app
+   - Enter credentials for user without access
    - Verify redirect to pricing page
 
 3. **Invalid Credentials:**
+   - Visit app.medicaremastery.app
    - Enter wrong password
    - Verify error message displays
    - Verify no redirect occurs
+   - Verify user stays on login UI
 
 4. **Session Persistence:**
    - Login successfully
    - Close browser
    - Reopen and visit app.medicaremastery.app
-   - Verify automatic login
+   - Verify automatic dashboard load (no login UI shown)
 
-5. **Protected Route:**
-   - Visit app.medicaremastery.app without login
-   - Verify redirect to login page
-   - Login successfully
-   - Verify return to intended destination
+5. **Direct Root Access (No Session):**
+   - Clear session/logout
+   - Visit app.medicaremastery.app directly
+   - Verify login UI appears immediately
+   - No redirect needed
+
+6. **Direct Root Access (With Session and Access):**
+   - Login successfully (have active access)
+   - Visit app.medicaremastery.app directly
+   - Verify dashboard loads immediately
+   - No login UI shown
 
 ## Troubleshooting
 
@@ -294,6 +365,21 @@ VITE_SUPABASE_ANON_KEY=[your-anon-key]
 3. Verify Supabase credentials in environment variables
 4. Check browser console for errors
 5. Verify network connectivity
+6. Confirm app.medicaremastery.app is loading correctly
+
+### Login UI Not Showing on App Root
+
+**Possible Causes:**
+1. Cached session exists but is invalid
+2. Loading state stuck
+3. JavaScript errors preventing render
+4. Domain detection not working on localhost
+
+**Solutions:**
+1. Clear browser cache and localStorage
+2. Check browser console for errors
+3. Verify hostname detection logic includes localhost
+4. Try hard refresh (Ctrl+Shift+R)
 
 ### Redirect Loop
 
@@ -315,8 +401,9 @@ VITE_SUPABASE_ANON_KEY=[your-anon-key]
 1. Verify entitlement exists for user
 2. Check `has_active_access` and `payment_verified` are both true
 3. Verify RLS policies allow user to read their entitlement
-4. Check browser console for errors
+4. Check browser console for errors in root route logic
 5. Verify session is valid
+6. Check enrollment.program_access is 'unlocked'
 
 ## Maintenance
 
@@ -325,24 +412,38 @@ VITE_SUPABASE_ANON_KEY=[your-anon-key]
 If adding OAuth or other login methods:
 1. Implement on LoginPage component only
 2. Ensure entitlement check happens after authentication
-3. Maintain redirect logic based on access status
+3. Maintain root route's intelligent view switching
 4. Update LoginPage UI accordingly
+5. Test with root route logic to ensure proper view selection
 
 ### Changing Redirect URLs
 
 When deploying to different domains:
-1. Update `handleLoginClick` in App.tsx
-2. Update LoginPage redirect URLs
-3. Update ProtectedApp redirect URLs
-4. Update documentation
+1. Update `handleLoginClick` in App.tsx (marketing site redirect)
+2. Update hostname detection in root route logic
+3. Update LoginPage redirect URLs after successful login
+4. Update ProtectedApp redirect URLs
+5. Update documentation
+
+### Modifying Root Route Logic
+
+To change the root route's behavior:
+1. Update the `isAppDomain` and `isRootRoute` checks in App.tsx
+2. Modify the view selection logic in the useEffect
+3. Test all combinations:
+   - No session → login UI
+   - Session + access → dashboard
+   - Session + no access → pricing redirect
+4. Verify localhost development works correctly
 
 ### Modifying Access Control
 
 To change access logic:
 1. Update entitlement check query in LoginPage
 2. Update hasActiveAccess logic in AuthContext
-3. Update ProtectedApp access checks
-4. Ensure RLS policies match new logic
+3. Update root route access checks in App.tsx
+4. Update ProtectedApp access checks
+5. Ensure RLS policies match new logic
 
 ---
 

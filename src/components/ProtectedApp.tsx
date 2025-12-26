@@ -12,8 +12,8 @@ export default function ProtectedApp() {
     }
 
     if (!user) {
-      console.log('❌ [PROTECTED] No user session found, redirecting to login');
-      window.location.href = 'https://app.medicaremastery.app/login';
+      console.log('❌ [PROTECTED] No user session found, redirecting to app root');
+      window.location.href = 'https://app.medicaremastery.app';
       return;
     }
 
