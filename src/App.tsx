@@ -18,7 +18,7 @@ import SuccessPage from './components/SuccessPage';
 import CancelPage from './components/CancelPage';
 
 function AppContent() {
-  const { user, enrollment, loading } = useAuth();
+  const { user, hasActiveAccess, loading } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isEnrollmentModalOpen, setIsEnrollmentModalOpen] = useState(false);
   const [isRoadmapModalOpen, setIsRoadmapModalOpen] = useState(false);
@@ -52,14 +52,11 @@ function AppContent() {
       if (!user) {
         console.log('🔵 [APP] No user session on app root, showing login');
         setCurrentView('login');
-      } else if (enrollment?.program_access === 'unlocked') {
-        console.log('✅ [APP] User has access, showing dashboard');
+      } else if (hasActiveAccess) {
+        console.log('✅ [APP] User has active access, showing dashboard');
         setCurrentView('dashboard');
-      } else if (enrollment?.program_access === 'locked') {
-        console.log('⚠️ [APP] User has no access, showing payment required');
-        setCurrentView('payment');
       } else {
-        console.log('❌ [APP] User has no enrollment, redirecting to pricing');
+        console.log('❌ [APP] User has no active access, redirecting to pricing');
         window.location.href = 'https://medicaremastery.app/pricing';
       }
       return;
@@ -71,35 +68,30 @@ function AppContent() {
     if (isProtectedRoute) {
       if (!user) {
         window.location.href = 'https://app.medicaremastery.app';
-      } else if (enrollment?.program_access === 'unlocked') {
+      } else if (hasActiveAccess) {
         setCurrentView('dashboard');
-      } else if (enrollment?.program_access === 'locked') {
-        setCurrentView('payment');
       } else {
-        setCurrentView('landing');
+        window.location.href = 'https://medicaremastery.app/pricing';
       }
     } else if (isPublicRoute) {
       setCurrentView('landing');
     }
-  }, [user, enrollment, loading]);
+  }, [user, hasActiveAccess, loading]);
 
   const handleEnrollClick = () => {
     console.log('🟢 [APP] Enroll button clicked on landing page');
     console.log('🟢 [APP] User state:', user ? `Logged in as ${user.email}` : 'Not logged in');
-    console.log('🟢 [APP] Enrollment state:', enrollment || 'No enrollment');
+    console.log('🟢 [APP] Access state:', hasActiveAccess ? 'Has access' : 'No access');
 
     if (!user) {
-      console.log('🟢 [APP] Opening authentication modal');
+      console.log('🟢 [APP] Opening authentication modal for signup');
       setIsAuthModalOpen(true);
-    } else if (!enrollment) {
-      console.log('🟢 [APP] Opening enrollment modal');
-      setIsEnrollmentModalOpen(true);
-    } else if (enrollment.program_access === 'locked') {
-      console.log('🟢 [APP] Redirecting to payment required page');
-      setCurrentView('payment');
+    } else if (hasActiveAccess) {
+      console.log('🟢 [APP] User already has access, redirecting to dashboard');
+      window.location.href = 'https://app.medicaremastery.app';
     } else {
-      console.log('🟢 [APP] Redirecting to dashboard');
-      setCurrentView('dashboard');
+      console.log('🟢 [APP] User needs to complete payment, showing enrollment modal');
+      setIsEnrollmentModalOpen(true);
     }
   };
 
@@ -113,14 +105,11 @@ function AppContent() {
   };
 
   const handleLoginSuccess = () => {
-    if (enrollment?.program_access === 'unlocked') {
-      window.history.pushState({}, '', '/program');
-      setCurrentView('dashboard');
-    } else if (enrollment?.program_access === 'locked') {
-      window.history.pushState({}, '', '/payment-required');
-      setCurrentView('payment');
+    if (hasActiveAccess) {
+      console.log('✅ [APP] Login successful with active access, redirecting to dashboard');
+      window.location.href = 'https://app.medicaremastery.app';
     } else {
-      window.history.pushState({}, '', '/');
+      console.log('⚠️ [APP] Login successful but no active access, staying on landing');
       setCurrentView('landing');
     }
   };

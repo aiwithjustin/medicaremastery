@@ -126,44 +126,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string, phone: string) => {
     try {
+      console.log('🔵 [AUTH] Creating auth user only (no profile or enrollment)');
+
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            full_name: fullName,
+            phone: phone,
+          },
+        },
       });
 
       if (signUpError) throw signUpError;
       if (!data.user) throw new Error('No user returned from signup');
 
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .insert([
-          {
-            id: data.user.id,
-            full_name: fullName,
-            phone: phone,
-          },
-        ]);
-
-      if (profileError) throw profileError;
-
-      const { error: enrollmentError } = await supabase
-        .from('enrollments')
-        .insert([
-          {
-            user_id: data.user.id,
-            email: email,
-            enrollment_status: 'unpaid',
-            program_access: 'locked',
-            payment_amount: 97,
-          },
-        ]);
-
-      if (enrollmentError && enrollmentError.code !== '23505') {
-        throw enrollmentError;
-      }
+      console.log('✅ [AUTH] Auth user created successfully');
 
       return { error: null, user: data.user };
     } catch (error) {
+      console.error('❌ [AUTH] Signup failed:', error);
       return { error: error as Error, user: null };
     }
   };

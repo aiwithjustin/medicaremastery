@@ -76,63 +76,26 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const { data: existingEntitlement } = await supabase
+      console.log('✨ [WEBHOOK] Creating/updating entitlement for user');
+
+      const { error: upsertError } = await supabase
         .from('entitlements')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+        .upsert({
+          user_id: userId,
+          has_active_access: true,
+          payment_verified: true,
+          stripe_payment_intent_id: session.payment_intent,
+          stripe_customer_id: session.customer,
+        }, {
+          onConflict: 'user_id',
+        });
 
-      if (existingEntitlement) {
-        console.log('🔄 [WEBHOOK] Updating existing entitlement');
-        
-        const { error: updateError } = await supabase
-          .from('entitlements')
-          .update({
-            has_active_access: true,
-            payment_verified: true,
-            stripe_payment_intent_id: session.payment_intent,
-            stripe_customer_id: session.customer,
-          })
-          .eq('user_id', userId);
-
-        if (updateError) {
-          console.error('❌ [WEBHOOK] Failed to update entitlement:', updateError);
-          throw updateError;
-        }
-      } else {
-        console.log('✨ [WEBHOOK] Creating new entitlement');
-        
-        const { error: insertError } = await supabase
-          .from('entitlements')
-          .insert({
-            user_id: userId,
-            has_active_access: true,
-            payment_verified: true,
-            stripe_payment_intent_id: session.payment_intent,
-            stripe_customer_id: session.customer,
-          });
-
-        if (insertError) {
-          console.error('❌ [WEBHOOK] Failed to create entitlement:', insertError);
-          throw insertError;
-        }
+      if (upsertError) {
+        console.error('❌ [WEBHOOK] Failed to upsert entitlement:', upsertError);
+        throw upsertError;
       }
 
-      const { error: enrollmentError } = await supabase
-        .from('enrollments')
-        .update({
-          enrollment_status: 'paid',
-          program_access: 'unlocked',
-          payment_confirmed_at: new Date().toISOString(),
-          payment_method: 'stripe',
-        })
-        .eq('user_id', userId);
-
-      if (enrollmentError && enrollmentError.code !== '23503') {
-        console.error('⚠️ [WEBHOOK] Failed to update enrollment:', enrollmentError);
-      }
-
-      console.log('✅ [WEBHOOK] Payment processed successfully');
+      console.log('✅ [WEBHOOK] Entitlement granted successfully');
       
       return new Response(
         JSON.stringify({ 
